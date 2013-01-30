@@ -3,7 +3,7 @@
 
 name:                embeddock
 version:             0.1.0.0
-synopsis:            In Haddock documentation embed the values from the same module
+synopsis:            Embed the values in scope in the haddock documentation of the module
 description:         embeddock is a Haskell source-code preprocessor. 
                      It allows you to embed computer-generated 
                      values in the documentation.
