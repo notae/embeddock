@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                embeddock
-version:             0.1.0.0
+version:             0.1.0.1
 synopsis:            Embed the values in scope in the haddock documentation of the module
 description:         embeddock is a Haskell source-code preprocessor. 
                      It allows you to embed computer-generated 

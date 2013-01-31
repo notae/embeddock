@@ -67,9 +67,9 @@ main = do
 
         seedEmbed :: Tok -> Tok
         seedEmbed (Com str) = Com $ foldl
-            (\str e -> replace (printf "%s(%s)" embedKey e)
-                               (printf "%s%s%s" openKey e closeKey)
-                               str)
+            (\str' e -> replace (printf "%s(%s)" embedKey e)
+                                (printf "%s%s%s" openKey e closeKey)
+                                str')
             str embeds
         seedEmbed x = x
 
@@ -103,8 +103,6 @@ main = do
 
 
   when (not isEmbedLoop) $ do
-    print parsedSrc
-    print embedKey
     writeFile runnerFn $ destContent ++ "\n" ++ quineMain
     (_, hOut, _, _) <- runInteractiveCommand $
       printf "runhaskell %s %s" (unwords runhaskellArgs) runnerFn
