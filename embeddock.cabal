@@ -10,6 +10,8 @@ description:         embeddock is a Haskell source-code preprocessor.
                      
 
 homepage:            https://github.com/nushio3/embeddock
+bug-reports:         https://github.com/nushio3/embeddock/issues
+
 license:             BSD3
 license-file:        LICENSE
 author:              Takayuki Muranushi
@@ -28,3 +30,8 @@ executable embeddock
                      , her-lexer >= 0.1.1
                      , MissingH >= 1.2
                      , process >= 0.9
+
+
+Source-Repository head
+  Type:                 git
+  Location:             https://github.com/nushio3/embeddock

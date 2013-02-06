@@ -3,7 +3,7 @@
 import Control.Monad
 import Data.List (isInfixOf)
 import Data.String.Utils (replace)
-import Language.Haskell.Her.HaLay (ready, tokssOut, toksOut, Tok(Com))
+import Language.Haskell.Her.HaLay (ready, tokssOut, toksOut, Tok(Com,NL))
 import System.Environment
 import System.FilePath (splitFileName, splitExtension, (</>), (<.>))
 import System.IO
@@ -52,7 +52,8 @@ main = do
 
     runnerFn = srcDir </> ("." ++ srcFnBody ++ "_embeddock") <.> srcExt
 
-    destContent = tokssOut parsedSrc
+
+    destContent = tokssOut   parsedSrc
 
     quineMain = unlines $ "main = do" :map mkPrinter parsedSrc
 
@@ -104,6 +105,7 @@ main = do
 
   when (not isEmbedLoop) $ do
     writeFile runnerFn $ destContent ++ "\n" ++ quineMain
-    (_, hOut, _, _) <- runInteractiveCommand $
+    (_, hOut, hErr, _) <- runInteractiveCommand $
       printf "runhaskell %s %s" (unwords runhaskellArgs) runnerFn
+    hGetContents hErr >>= hPutStr stderr
     hGetContents hOut >>= writeFile destPath
