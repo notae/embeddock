@@ -3,7 +3,7 @@
 import Control.Monad
 import Data.List (isInfixOf)
 import Data.String.Utils (replace)
-import Language.Haskell.Her.HaLay (ready, tokssOut, toksOut, Tok(Com,NL))
+import Language.Haskell.Her.HaLay (ready, tokssOut, toksOut, Tok(Com))
 import System.Environment
 import System.FilePath (splitFileName, splitExtension, (</>), (<.>))
 import System.IO
@@ -13,7 +13,10 @@ import Text.Printf
 
 main :: IO ()
 main = do
-  (srcPath:_:destPath:ppOpts) <- getArgs
+  argv <- getArgs
+  let (srcPath:_:destPath:ppOpts) 
+          | length argv >= 3 = argv
+          | otherwise        = take 3 $ argv ++ repeat ""
   src <- readFile srcPath
   let
     embedKey :: String
@@ -108,4 +111,6 @@ main = do
     (_, hOut, hErr, _) <- runInteractiveCommand $
       printf "runhaskell %s %s" (unwords runhaskellArgs) runnerFn
     hGetContents hErr >>= hPutStr stderr
-    hGetContents hOut >>= writeFile destPath
+    hGetContents hOut >>= 
+      (if destPath /= "" then writeFile destPath
+                         else putStrLn )
