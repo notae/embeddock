@@ -23,7 +23,8 @@ cabal-version:       >=1.8
 
 library
   hs-source-dirs:      src/
-  exposed-modules:   Embeddock.Example
+  exposed-modules:   Embeddock
+  other-modules:     Embeddock.Example
   build-depends:       base >=4.5 && <5
 
 executable embeddock
