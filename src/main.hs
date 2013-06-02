@@ -1,9 +1,11 @@
 {-# OPTIONS -Wall #-}
 
+
+import Control.Lens (_1,  _2, (^.), Lens', (.~), (&))
 import Control.Monad
-import Data.List (isInfixOf)
+import Data.List (isInfixOf, isPrefixOf)
 import Data.String.Utils (replace)
-import Language.Haskell.Her.HaLay (ready, tokssOut, toksOut, Tok(Com))
+import Language.Haskell.Lexer (lexerPass0, Token(..), Pos, PosToken)
 import System.Environment
 import System.FilePath (splitFileName, splitExtension, (</>), (<.>))
 import System.IO
@@ -11,12 +13,28 @@ import System.Process (runInteractiveCommand)
 import Text.Printf
 
 
+strOfToken :: Lens' PosToken String
+strOfToken = _2 . _2
+posOfToken :: Lens' PosToken Pos
+posOfToken = _2 . _1
+tokOfToken :: Lens' PosToken Token
+tokOfToken = _1
+
+
+
+toksToStr :: [PosToken] -> String
+toksToStr = concat . map (^. strOfToken)
+
+
 main :: IO ()
 main = do
+  -- read the ghc preprocessor options. 
   argv <- getArgs
   let (srcPath:_:destPath:ppOpts) 
           | length argv >= 3 = argv
           | otherwise        = take 3 $ argv ++ repeat ""
+
+  -- the file to be processed.
   src <- readFile srcPath
   let
     embedKey :: String
@@ -35,17 +53,19 @@ main = do
         if cand `isInfixOf` src then findFree tag (3*n) tag'
                                 else cand
 
-    parsedSrc :: [[Tok]]
+    parsedSrc :: [PosToken]
     parsedSrc =
-      map (filter (not . isEmbedPragma)) $
-      ready srcPath src
+      filter (not . isEmbedPragma) $
+      lexerPass0 src
 
-    isEmbedPragma :: Tok -> Bool
-    isEmbedPragma (Com str)
-      | "OPTIONS_GHC" `isInfixOf` str && "embeddock" `isInfixOf` str
+    isEmbedPragma :: PosToken -> Bool
+    isEmbedPragma (tok, (_, str))
+      | tok == NestedComment 
+        && "{-#" `isPrefixOf` str 
+        && "OPTIONS_GHC" `isInfixOf` str 
+        && "embeddock" `isInfixOf` str
                     = True
       | otherwise   = False
-    isEmbedPragma _ = False
 
     (srcDir, srcFn) = splitFileName srcPath
     (srcFnBody, srcExt) = splitExtension srcFn
@@ -56,31 +76,36 @@ main = do
     runnerFn = srcDir </> ("." ++ srcFnBody ++ "_embeddock") <.> srcExt
 
 
-    destContent = tokssOut   parsedSrc
+    destContent :: String
+    destContent = toksToStr parsedSrc
 
-    quineMain = unlines $ "main = do" :map mkPrinter parsedSrc
+    quotedMain = unlines $ "main = do" :map mkPrinter parsedSrc
 
-    mkPrinter :: [Tok] -> String
-    mkPrinter toks = ("  putStr $ " ++ ) $
+    mkPrinter :: PosToken -> String
+    mkPrinter tok = ("  putStr $ " ++ ) $
         replace openKey  "\"++(" $
         replace closeKey ")++\"" $
-        show $ toksOut $ map seedEmbed toks
+        show $ 
+        seedEmbed tok ^. strOfToken
       where
         embeds :: [String]
-        embeds = toks >>= findEmbed
+        embeds = findEmbed tok 
 
-        seedEmbed :: Tok -> Tok
-        seedEmbed (Com str) = Com $ foldl
-            (\str' e -> replace (printf "%s(%s)" embedKey e)
-                                (printf "%s%s%s" openKey e closeKey)
-                                str')
-            str embeds
-        seedEmbed x = x
+        seedEmbed :: PosToken -> PosToken
+        seedEmbed tok = tok & strOfToken .~ newStr
+          where 
+            newStr = foldl
+              (\str' e -> replace (printf "%s(%s)" embedKey e)
+                                  (printf "%s%s%s" openKey e closeKey)
+                                  str')
+              (tok ^. strOfToken) embeds
 
 
-    findEmbed :: Tok -> [String]
-    findEmbed (Com str) = go str
+    findEmbed :: PosToken -> [String]
+    findEmbed tok = go str
       where
+        str = tok ^. strOfToken
+
         go []  = []
         go xss@(_:xs) = try embedKey xss `mplus` go xs
 
@@ -102,15 +127,22 @@ main = do
                             next ')' = n-1
                             next _   = n
                         in tryParen (next x) xs (x:buf)
-    findEmbed _ = []
 
 
 
   when (not isEmbedLoop) $ do
-    writeFile runnerFn $ destContent ++ "\n" ++ quineMain
+
+    -- generate a modified source file with the quoter and original bindings in scope
+    writeFile runnerFn $ destContent ++ "\n" ++ quotedMain
+
+    -- let the file print out the new file
     (_, hOut, hErr, _) <- runInteractiveCommand $
       printf "runhaskell %s %s" (unwords runhaskellArgs) runnerFn
+
+    -- mirror the standard error output
     hGetContents hErr >>= hPutStr stderr
+
+    -- print out the standard output
     hGetContents hOut >>= 
       (if destPath /= "" then writeFile destPath
                          else putStrLn )
