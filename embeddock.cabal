@@ -22,6 +22,8 @@ library
   hs-source-dirs:    src/
   exposed-modules:   Embeddock
                      Embeddock.Option
+                     Embeddock.Option.Value
+
   build-depends:     base >=4.5 && <5
                    , cmdargs >= 0.10.3
 
