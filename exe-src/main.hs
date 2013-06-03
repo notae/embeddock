@@ -12,7 +12,7 @@ import System.IO
 import System.Process (runInteractiveCommand)
 import Text.Printf
 
-import qualified Embeddock.Option as Opt
+import qualified Embeddock.Option.Value as Opt
 
 strOfToken :: Lens' PosToken String
 strOfToken = _2 . _2
@@ -29,21 +29,13 @@ toksToStr = concat . map (^. strOfToken)
 
 main :: IO ()
 main = do
-  -- read the ghc preprocessor options.
-  argv <- getArgs
-  let (originalPath:srcPath:destPath:ppOpts)
-          | length argv >= 3 = argv
-          | otherwise        = take 3 $ argv ++ repeat ""
-
   -- the file to be processed.
-  src <- readFile srcPath
+  src <- readFile Opt.inputFilePath
   let
     embedKey :: String
     runhaskellArgs :: [String]
 
-    (embedKey,runhaskellArgs) = case ppOpts of
-      []     -> ("$", [])
-      (x:xs) -> (x, xs)
+    (embedKey,runhaskellArgs) = ("$", [])
 
     openKey, closeKey :: String
     openKey = findFree "Open" 1 "Sesami"
@@ -68,7 +60,7 @@ main = do
                     = True
       | otherwise   = False
 
-    (srcDir, srcFn) = splitFileName srcPath
+    (srcDir, srcFn) = splitFileName Opt.inputFilePath
     (srcFnBody, srcExt) = splitExtension srcFn
 
     isEmbedLoop = (head srcFn == '.') &&
@@ -145,5 +137,5 @@ main = do
 
     -- print out the standard output
     hGetContents hOut >>=
-      (if destPath /= "" then writeFile destPath
+      (if Opt.outputFilePath /= "" then writeFile Opt.outputFilePath
                          else putStrLn )
