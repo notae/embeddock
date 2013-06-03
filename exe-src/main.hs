@@ -35,7 +35,7 @@ main = do
     embedKey :: String
     runhaskellArgs :: [String]
 
-    (embedKey,runhaskellArgs) = ("$", [])
+    (embedKey,runhaskellArgs) = ("#", [])
 
     openKey, closeKey :: String
     openKey = findFree "Open" 1 "Sesami"
@@ -88,7 +88,7 @@ main = do
         seedEmbed tok = tok & strOfToken .~ newStr
           where
             newStr = foldl
-              (\str' e -> replace (printf "%s(%s)" embedKey e)
+              (\str' e -> replace (printf "%s{%s}" embedKey e)
                                   (printf "%s%s%s" openKey e closeKey)
                                   str')
               (tok ^. strOfToken) embeds
@@ -107,7 +107,7 @@ main = do
         try (k:ey) (x:xs)
           | k==x        = try ey xs
           | otherwise   = []
-        try [] ('(':xs) = tryParen (1::Int) xs ""
+        try [] ('{':xs) = tryParen (1::Int) xs ""
         try _ _         = []
 
         tryParen n [] buf
@@ -116,8 +116,8 @@ main = do
 
         tryParen n (x:xs) buf
           | n <= 0    = [reverse $ drop 1 buf]
-          | otherwise = let next '(' = n+1
-                            next ')' = n-1
+          | otherwise = let next '{' = n+1
+                            next '}' = n-1
                             next _   = n
                         in tryParen (next x) xs (x:buf)
 
