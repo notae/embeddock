@@ -12,6 +12,7 @@ import System.IO
 import System.Process (runInteractiveCommand)
 import Text.Printf
 
+import qualified Embeddock.Option as Opt
 
 strOfToken :: Lens' PosToken String
 strOfToken = _2 . _2
@@ -28,9 +29,9 @@ toksToStr = concat . map (^. strOfToken)
 
 main :: IO ()
 main = do
-  -- read the ghc preprocessor options. 
+  -- read the ghc preprocessor options.
   argv <- getArgs
-  let (srcPath:_:destPath:ppOpts) 
+  let (originalPath:srcPath:destPath:ppOpts)
           | length argv >= 3 = argv
           | otherwise        = take 3 $ argv ++ repeat ""
 
@@ -60,9 +61,9 @@ main = do
 
     isEmbedPragma :: PosToken -> Bool
     isEmbedPragma (tok, (_, str))
-      | tok == NestedComment 
-        && "{-#" `isPrefixOf` str 
-        && "OPTIONS_GHC" `isInfixOf` str 
+      | tok == NestedComment
+        && "{-#" `isPrefixOf` str
+        && "OPTIONS_GHC" `isInfixOf` str
         && "embeddock" `isInfixOf` str
                     = True
       | otherwise   = False
@@ -85,15 +86,15 @@ main = do
     mkPrinter tok = ("  putStr $ " ++ ) $
         replace openKey  "\"++(" $
         replace closeKey ")++\"" $
-        show $ 
+        show $
         seedEmbed tok ^. strOfToken
       where
         embeds :: [String]
-        embeds = findEmbed tok 
+        embeds = findEmbed tok
 
         seedEmbed :: PosToken -> PosToken
         seedEmbed tok = tok & strOfToken .~ newStr
-          where 
+          where
             newStr = foldl
               (\str' e -> replace (printf "%s(%s)" embedKey e)
                                   (printf "%s%s%s" openKey e closeKey)
@@ -143,6 +144,6 @@ main = do
     hGetContents hErr >>= hPutStr stderr
 
     -- print out the standard output
-    hGetContents hOut >>= 
+    hGetContents hOut >>=
       (if destPath /= "" then writeFile destPath
                          else putStrLn )

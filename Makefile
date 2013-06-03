@@ -1,4 +1,4 @@
-all: build doc
+all: build
 
 .PHONY: init build doc test
 
@@ -16,5 +16,4 @@ install: init build test
 	cabal install
 
 doc:
-	cabal haddock --hyperlink-source --executables
-
+	cabal haddock --hyperlink-source
